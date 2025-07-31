@@ -1,0 +1,1497 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Routine Helper - Child Profile</title>
+<style>
+    body { font-family: Arial, sans-serif; background-color: #fef6f9; padding: 20px; }
+    .section { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 20px; box-shadow: 0 0 10px #ccc; }
+    h2 { color: #6a5acd; }
+    .editable-only { display: none; }
+    button { margin-left: 10px; }
+  </style>
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f3f6fa;
+    margin: 0;
+    padding: 0;
+    color: #333;
+  }
+  h1, h2 {
+    text-align: center;
+    color: #2c3e50;
+  }
+  .section {
+    background-color: white;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 800px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 5px 0;
+  }
+  button:hover {
+    background-color: #2980b9;
+  }
+  input, select {
+    padding: 10px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  ul, table {
+    width: 100%;
+    padding: 0;
+    list-style: none;
+  }
+  li, td {
+    margin: 8px 0;
+    padding: 10px;
+    background: #ecf0f1;
+    border-radius: 10px;
+  }
+  .removable {
+    margin-left: 10px;
+    background: transparent;
+    color: red;
+    font-size: 18px;
+  }
+  .removable:hover {
+    background: transparent;
+    color: darkred;
+  }
+  #calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 10px;
+  }
+  #calendar > div {
+    background: #fff;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 0 4px rgba(0,0,0,0.05);
+  }
+  .calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    padding: 10px 0;
+    background-color: #dfe6e9;
+    border-radius: 10px;
+  }
+  .tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tile-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .tile-menu-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 10px;
+  }
+</style>
+</head>
+<body><button onclick="location.href='parent_dashboard.html'" style="position: fixed; top: 20px; right: 20px; padding: 10px 15px; font-size: 14px; border-radius: 10px; background-color: #eee; border: 1px solid #ccc; cursor: pointer;">⬅ Back to Parent View</button><button onclick="location.href='child_dashboard.html'" style="position: fixed; top: 20px; left: 20px; padding: 10px 15px; font-size: 14px; border-radius: 10px; background-color: #eee; border: 1px solid #ccc; cursor: pointer;">← Return to Dashboard</button>
+<div style="text-align: right; padding: 10px;">
+</div>
+<div style="display: flex; justify-content: center;">
+<div style="position: relative; display: flex; align-items: center; gap: 20px; background-color: #fff0f5; padding: 20px 30px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 0 10px #ccc;">
+<div style="font-size: 50px;">👧</div>
+<div>
+<div><strong>Name:</strong> <span id="childName">Walter</span></div>
+<div><strong>Age:</strong> <span id="childAge">7</span></div>
+<div><strong>Coins:</strong> <span id="coinCount">100</span></div>
+</div>
+<div style="position: absolute; top: 10px; right: 15px;">
+<button onclick="toggleEditChild()" style="background: none; border: none; font-size: 20px; cursor: pointer;">⋮</button>
+</div>
+</div>
+</div>
+<!-- Hidden child edit form -->
+<div id="childEditForm" style="display: none; text-align: center; margin-bottom: 20px;">
+<input id="editChildName" placeholder="Enter name" type="text"/>
+<input id="editChildAge" placeholder="Enter age" type="number"/>
+<select id="editChildAvatar">
+<option value="👧">👧</option>
+<option value="👦">👦</option>
+<option value="🦎">🦎</option>
+<option value="👩">👩</option>
+<option value="👨">👨</option>
+<option value="🧑">🧑</option>
+<option value="👶">👶</option>
+</select>
+<button onclick="saveChildInfo()">Save</button>
+</div>
+<label><input id="editToggle" type="checkbox"/> Edit Mode</label>
+<div class="section">
+<h2>Tasks</h2>
+<ul id="taskList"></ul>
+<div class="editable-only">
+<input id="taskInput" placeholder="Task description" type="text"/>
+<input id="taskCoins" placeholder="Coins" type="number"/>
+<button id="addTaskBtn">Add Task</button>
+</div>
+</div>
+<div class="section">
+<h2>Schedule</h2>
+<table border="1" id="scheduleTable" style="width:100%; border-collapse: collapse; text-align: left; box-shadow: 0 0 10px #ccc;">
+<style>
+    #scheduleTable th, #scheduleTable td {
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    #scheduleTable thead {
+      background-color: #f0f0ff;
+    }
+    #scheduleTable tr:nth-child(even) {
+      background-color: #fdfdff;
+    }
+    #scheduleTable tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+  </style>
+<thead><tr><th>Time</th><th>Clock</th><th>Activity</th><th class="editable-only">Actions</th></tr></thead>
+<tbody id="scheduleList"></tbody>
+</table>
+<div class="editable-only">
+<input id="scheduleTime" type="time"/>
+<input id="scheduleInput" placeholder="Schedule item" type="text"/>
+<button id="addScheduleBtn">Add</button>
+</div>
+</div>
+<div class="section">
+<h2>Important Events</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+<button id="prevMonth">⬅️ Previous</button>
+<h3 id="calendarMonth"></h3>
+<button id="nextMonth">Next ➡️</button>
+</div>
+<div id="calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; text-align: center;">
+<div><strong>Mon</strong></div>
+<div><strong>Tue</strong></div>
+<div><strong>Wed</strong></div>
+<div><strong>Thu</strong></div>
+<div><strong>Fri</strong></div>
+<div><strong>Sat</strong></div>
+<div><strong>Sun</strong></div>
+</div>
+<div class="editable-only" style="margin-top: 15px;">
+<input id="eventDate" type="date"/>
+<input id="eventInput" placeholder="Event description" type="text"/>
+<button id="addEventBtn">Add</button>
+</div>
+</div>
+<div class="section">
+<h2>Reward Shop</h2>
+<div style="display: flex; gap: 20px;">
+<div style="flex: 1;">
+<h3>Available Items</h3>
+<ul id="shopList"></ul>
+</div>
+<div style="flex: 1;">
+<h3>Purchased Items</h3>
+<ul id="purchasedList"></ul>
+</div>
+</div>
+<div class="editable-only">
+<input id="shopItemInput" placeholder="Item name" type="text"/>
+<input id="shopItemCost" placeholder="Cost in coins" type="number"/>
+<button id="addShopBtn">Add</button>
+</div>
+</div>
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Routine Helper - Child Profile</title>
+<style>
+    body { font-family: Arial, sans-serif; background-color: #fef6f9; padding: 20px; }
+    .section { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 20px; box-shadow: 0 0 10px #ccc; }
+    h2 { color: #6a5acd; }
+    .editable-only { display: none; }
+    button { margin-left: 10px; }
+  </style>
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f3f6fa;
+    margin: 0;
+    padding: 0;
+    color: #333;
+  }
+  h1, h2 {
+    text-align: center;
+    color: #2c3e50;
+  }
+  .section {
+    background-color: white;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 800px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 5px 0;
+  }
+  button:hover {
+    background-color: #2980b9;
+  }
+  input, select {
+    padding: 10px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  ul, table {
+    width: 100%;
+    padding: 0;
+    list-style: none;
+  }
+  li, td {
+    margin: 8px 0;
+    padding: 10px;
+    background: #ecf0f1;
+    border-radius: 10px;
+  }
+  .removable {
+    margin-left: 10px;
+    background: transparent;
+    color: red;
+    font-size: 18px;
+  }
+  .removable:hover {
+    background: transparent;
+    color: darkred;
+  }
+  #calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 10px;
+  }
+  #calendar > div {
+    background: #fff;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 0 4px rgba(0,0,0,0.05);
+  }
+  .calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    padding: 10px 0;
+    background-color: #dfe6e9;
+    border-radius: 10px;
+  }
+  .tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tile-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .tile-menu-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 10px;
+  }
+</style>
+</head>
+<body>
+<div style="text-align: right; padding: 10px;">
+</div>
+<label><input id="editToggle" type="checkbox"/> Edit Mode</label>
+<div style="flex: 1;">
+<h3>Purchased Items</h3>
+<ul id="purchasedList"></ul>
+</div>
+<div class="editable-only">
+<input id="shopItemInput" placeholder="Item name" type="text"/>
+<input id="shopItemCost" placeholder="Cost in coins" type="number"/>
+<button id="addShopBtn">Add</button>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const coinDisplay = document.getElementById("coinCount");
+  let coins = parseInt(coinDisplay.textContent);
+
+  function updateCoins(amount) {
+    coins += amount;
+    coinDisplay.textContent = coins;
+  }
+
+  document.getElementById("editToggle").addEventListener("change", (e) => {
+    const isEdit = e.target.checked;
+    document.querySelectorAll(".editable-only").forEach(el => {
+      el.style.display = isEdit ? "block" : "none";
+    });
+    document.querySelectorAll(".removable").forEach(btn => {
+      btn.style.display = isEdit ? "inline" : "none";
+    });
+  });
+
+  function createRemoveButton(row) {
+    const btn = document.createElement("button");
+    btn.textContent = "🗑️";
+    btn.className = "removable";
+    btn.style.display = document.getElementById("editToggle").checked ? "inline" : "none";
+    btn.onclick = () => {
+      row.remove();
+      sortScheduleTable();
+    };
+    return btn;
+  }
+
+  function getClockEmoji(hourStr) {
+    const hour = parseInt(hourStr);
+    const clockEmojis = {
+      1: "🕐", 2: "🕑", 3: "🕒", 4: "🕓", 5: "🕔", 6: "🕕",
+      7: "🕖", 8: "🕗", 9: "🕘", 10: "🕙", 11: "🕚", 12: "🕛"
+    };
+    return clockEmojis[hour] || "🕰️";
+  }
+
+  function addToPurchased(name, cost) {
+    const li = document.createElement("li");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.marginRight = "10px";
+    checkbox.onchange = () => {
+      li.style.textDecoration = checkbox.checked ? "line-through" : "none";
+    };
+    li.appendChild(checkbox);
+    li.appendChild(document.createTextNode(`${name} - ${cost} coins`));
+    document.getElementById("purchasedList").appendChild(li);
+  }
+
+  document.getElementById("addTaskBtn").addEventListener("click", () => {
+    const desc = document.getElementById("taskInput").value;
+    const reward = parseInt(document.getElementById("taskCoins").value);
+    if (desc && !isNaN(reward)) {
+      const li = document.createElement("li");
+      li.textContent = `${desc} - ${reward} coins `;
+      const toggle = document.createElement("button");
+      toggle.textContent = "✅ Done";
+      toggle.onclick = () => {
+        if (toggle.textContent === "✅ Done") {
+          updateCoins(reward);
+          toggle.textContent = "❌ Undo";
+        } else {
+          updateCoins(-reward);
+          toggle.textContent = "✅ Done";
+        }
+      };
+      li.appendChild(toggle);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("taskList").appendChild(li);
+      document.getElementById("taskInput").value = "";
+      document.getElementById("taskCoins").value = "";
+    }
+  });
+
+  document.getElementById("addShopBtn").addEventListener("click", () => {
+    const name = document.getElementById("shopItemInput").value;
+    const cost = parseInt(document.getElementById("shopItemCost").value);
+    if (name && !isNaN(cost)) {
+      const li = document.createElement("li");
+      li.textContent = `${name} - ${cost} coins `;
+      const buy = document.createElement("button");
+      buy.textContent = "Buy";
+      buy.onclick = () => {
+        if (coins >= cost) {
+          updateCoins(-cost);
+          addToPurchased(name, cost);
+          li.remove();
+        } else {
+          alert("Not enough coins!");
+        }
+      };
+      li.appendChild(buy);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("shopList").appendChild(li);
+      document.getElementById("shopItemInput").value = "";
+      document.getElementById("shopItemCost").value = "";
+    }
+  });
+
+  document.getElementById("addScheduleBtn").addEventListener("click", () => {
+    const time = document.getElementById("scheduleTime").value;
+    const task = document.getElementById("scheduleInput").value;
+    if (time && task) {
+      const [h, m] = time.split(":");
+      const hour12 = parseInt(h) % 12 === 0 ? 12 : parseInt(h) % 12;
+      const ampm = parseInt(h) >= 12 ? "PM" : "AM";
+      const formattedTime = hour12 + ":" + m + " " + ampm;
+
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-time", time); // for sorting
+
+      const tdTime = document.createElement("td");
+      const tdClock = document.createElement("td");
+      const tdTask = document.createElement("td");
+      const tdActions = document.createElement("td");
+
+      tdTime.textContent = formattedTime;
+      tdClock.textContent = getClockEmoji(hour12);
+      tdTask.textContent = task;
+      tdActions.appendChild(createRemoveButton(tr));
+
+      tr.appendChild(tdTime);
+      tr.appendChild(tdClock);
+      tr.appendChild(tdTask);
+      tr.appendChild(tdActions);
+
+      document.getElementById("scheduleList").appendChild(tr);
+      document.getElementById("scheduleTime").value = "";
+      document.getElementById("scheduleInput").value = "";
+
+      sortScheduleTable();
+    }
+  });
+
+  function sortScheduleTable() {
+    const tbody = document.getElementById("scheduleList");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      return a.getAttribute("data-time").localeCompare(b.getAttribute("data-time"));
+    });
+    tbody.innerHTML = "";
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  // Calendar view
+  const calendar = document.getElementById("calendar");
+  const monthLabel = document.getElementById("calendarMonth");
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
+
+  function buildCalendar(month, year) {
+    monthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" });
+
+    while (calendar.children.length > 7) {
+      calendar.removeChild(calendar.lastChild);
+    }
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const offset = (firstDay.getDay() + 6) % 7;
+
+    for (let i = 0; i < offset; i++) {
+      const empty = document.createElement("div");
+      calendar.appendChild(empty);
+    }
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dateCell = document.createElement("div");
+      dateCell.style.border = "1px solid #ccc";
+      dateCell.style.minHeight = "60px";
+      dateCell.style.padding = "5px";
+      dateCell.style.backgroundColor = "#fff";
+      dateCell.style.borderRadius = "8px";
+      dateCell.setAttribute("data-day", day);
+      dateCell.setAttribute("data-month", month);
+      dateCell.setAttribute("data-year", year);
+      const label = document.createElement("div");
+      label.style.fontWeight = "bold";
+      label.textContent = day;
+      dateCell.appendChild(label);
+      calendar.appendChild(dateCell);
+    }
+  }
+
+  buildCalendar(currentMonth, currentYear);
+
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("addEventBtn").addEventListener("click", () => {
+    const date = document.getElementById("eventDate").value;
+    const desc = document.getElementById("eventInput").value;
+    if (date && desc) {
+      const eventDate = new Date(date);
+      const day = eventDate.getDate();
+      const month = eventDate.getMonth();
+      const year = eventDate.getFullYear();
+
+      const cell = calendar.querySelector(`[data-day='${day}'][data-month='${month}'][data-year='${year}']`);
+      if (cell) {
+        const entry = document.createElement("div");
+        entry.textContent = desc;
+        entry.style.fontSize = "0.85em";
+        entry.style.marginTop = "5px";
+        cell.appendChild(entry);
+      }
+
+      document.getElementById("eventDate").value = "";
+      document.getElementById("eventInput").value = "";
+    }
+  });
+});
+
+// Three-dot menu toggle functionality
+document.querySelectorAll(".tile-menu-btn").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll(".tile-menu").forEach(m => {
+      if (m !== menu) m.style.display = "none";
+    });
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  });
+});
+
+window.addEventListener("click", () => {
+  document.querySelectorAll(".tile-menu").forEach(m => m.style.display = "none");
+});
+
+
+function saveData() {
+  const data = {
+    coins: document.getElementById("coinCount").textContent,
+    tasks: document.getElementById("taskList").innerHTML,
+    shop: document.getElementById("shopList").innerHTML,
+    purchased: document.getElementById("purchasedList").innerHTML,
+    schedule: document.getElementById("scheduleList").innerHTML,
+    events: document.getElementById("calendar").innerHTML
+  };
+  localStorage.setItem("walterData", JSON.stringify(data));
+}
+
+function loadData() {
+  const data = JSON.parse(localStorage.getItem("walterData"));
+  if (!data) return;
+  document.getElementById("coinCount").textContent = data.coins || "0";
+  document.getElementById("taskList").innerHTML = data.tasks || "";
+  document.getElementById("shopList").innerHTML = data.shop || "";
+  document.getElementById("purchasedList").innerHTML = data.purchased || "";
+  document.getElementById("scheduleList").innerHTML = data.schedule || "";
+  document.getElementById("calendar").innerHTML = data.events || "";
+}
+
+// Save on unload
+window.addEventListener("beforeunload", saveData);
+window.addEventListener("load", loadData);
+
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const coinDisplay = document.getElementById("coinCount");
+  let coins = parseInt(coinDisplay.textContent);
+
+  function updateCoins(amount) {
+    coins += amount;
+    coinDisplay.textContent = coins;
+  }
+
+  document.getElementById("editToggle").addEventListener("change", (e) => {
+    const isEdit = e.target.checked;
+    document.querySelectorAll(".editable-only").forEach(el => {
+      el.style.display = isEdit ? "block" : "none";
+    });
+    document.querySelectorAll(".removable").forEach(btn => {
+      btn.style.display = isEdit ? "inline" : "none";
+    });
+  });
+
+  function createRemoveButton(row) {
+    const btn = document.createElement("button");
+    btn.textContent = "🗑️";
+    btn.className = "removable";
+    btn.style.display = document.getElementById("editToggle").checked ? "inline" : "none";
+    btn.onclick = () => {
+      row.remove();
+      sortScheduleTable();
+    };
+    return btn;
+  }
+
+  function getClockEmoji(hourStr) {
+    const hour = parseInt(hourStr);
+    const clockEmojis = {
+      1: "🕐", 2: "🕑", 3: "🕒", 4: "🕓", 5: "🕔", 6: "🕕",
+      7: "🕖", 8: "🕗", 9: "🕘", 10: "🕙", 11: "🕚", 12: "🕛"
+    };
+    return clockEmojis[hour] || "🕰️";
+  }
+
+  function addToPurchased(name, cost) {
+    const li = document.createElement("li");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.marginRight = "10px";
+    checkbox.onchange = () => {
+      li.style.textDecoration = checkbox.checked ? "line-through" : "none";
+    };
+    li.appendChild(checkbox);
+    li.appendChild(document.createTextNode(`${name} - ${cost} coins`));
+    document.getElementById("purchasedList").appendChild(li);
+  }
+
+  document.getElementById("addTaskBtn").addEventListener("click", () => {
+    const desc = document.getElementById("taskInput").value;
+    const reward = parseInt(document.getElementById("taskCoins").value);
+    if (desc && !isNaN(reward)) {
+      const li = document.createElement("li");
+      li.textContent = `${desc} - ${reward} coins `;
+      const toggle = document.createElement("button");
+      toggle.textContent = "✅ Done";
+      toggle.onclick = () => {
+        if (toggle.textContent === "✅ Done") {
+          updateCoins(reward);
+          toggle.textContent = "❌ Undo";
+        } else {
+          updateCoins(-reward);
+          toggle.textContent = "✅ Done";
+        }
+      };
+      li.appendChild(toggle);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("taskList").appendChild(li);
+      document.getElementById("taskInput").value = "";
+      document.getElementById("taskCoins").value = "";
+    }
+  });
+
+  document.getElementById("addShopBtn").addEventListener("click", () => {
+    const name = document.getElementById("shopItemInput").value;
+    const cost = parseInt(document.getElementById("shopItemCost").value);
+    if (name && !isNaN(cost)) {
+      const li = document.createElement("li");
+      li.textContent = `${name} - ${cost} coins `;
+      const buy = document.createElement("button");
+      buy.textContent = "Buy";
+      buy.onclick = () => {
+        if (coins >= cost) {
+          updateCoins(-cost);
+          addToPurchased(name, cost);
+          li.remove();
+        } else {
+          alert("Not enough coins!");
+        }
+      };
+      li.appendChild(buy);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("shopList").appendChild(li);
+      document.getElementById("shopItemInput").value = "";
+      document.getElementById("shopItemCost").value = "";
+    }
+  });
+
+  document.getElementById("addScheduleBtn").addEventListener("click", () => {
+    const time = document.getElementById("scheduleTime").value;
+    const task = document.getElementById("scheduleInput").value;
+    if (time && task) {
+      const [h, m] = time.split(":");
+      const hour12 = parseInt(h) % 12 === 0 ? 12 : parseInt(h) % 12;
+      const ampm = parseInt(h) >= 12 ? "PM" : "AM";
+      const formattedTime = hour12 + ":" + m + " " + ampm;
+
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-time", time); // for sorting
+
+      const tdTime = document.createElement("td");
+      const tdClock = document.createElement("td");
+      const tdTask = document.createElement("td");
+      const tdActions = document.createElement("td");
+
+      tdTime.textContent = formattedTime;
+      tdClock.textContent = getClockEmoji(hour12);
+      tdTask.textContent = task;
+      tdActions.appendChild(createRemoveButton(tr));
+
+      tr.appendChild(tdTime);
+      tr.appendChild(tdClock);
+      tr.appendChild(tdTask);
+      tr.appendChild(tdActions);
+
+      document.getElementById("scheduleList").appendChild(tr);
+      document.getElementById("scheduleTime").value = "";
+      document.getElementById("scheduleInput").value = "";
+
+      sortScheduleTable();
+    }
+  });
+
+  function sortScheduleTable() {
+    const tbody = document.getElementById("scheduleList");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      return a.getAttribute("data-time").localeCompare(b.getAttribute("data-time"));
+    });
+    tbody.innerHTML = "";
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  // Calendar view
+  const calendar = document.getElementById("calendar");
+  const monthLabel = document.getElementById("calendarMonth");
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
+
+  function buildCalendar(month, year) {
+    monthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" });
+
+    while (calendar.children.length > 7) {
+      calendar.removeChild(calendar.lastChild);
+    }
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const offset = (firstDay.getDay() + 6) % 7;
+
+    for (let i = 0; i < offset; i++) {
+      const empty = document.createElement("div");
+      calendar.appendChild(empty);
+    }
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dateCell = document.createElement("div");
+      dateCell.style.border = "1px solid #ccc";
+      dateCell.style.minHeight = "60px";
+      dateCell.style.padding = "5px";
+      dateCell.style.backgroundColor = "#fff";
+      dateCell.style.borderRadius = "8px";
+      dateCell.setAttribute("data-day", day);
+      dateCell.setAttribute("data-month", month);
+      dateCell.setAttribute("data-year", year);
+      const label = document.createElement("div");
+      label.style.fontWeight = "bold";
+      label.textContent = day;
+      dateCell.appendChild(label);
+      calendar.appendChild(dateCell);
+    }
+  }
+
+  buildCalendar(currentMonth, currentYear);
+
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("addEventBtn").addEventListener("click", () => {
+    const date = document.getElementById("eventDate").value;
+    const desc = document.getElementById("eventInput").value;
+    if (date && desc) {
+      const eventDate = new Date(date);
+      const day = eventDate.getDate();
+      const month = eventDate.getMonth();
+      const year = eventDate.getFullYear();
+
+      const cell = calendar.querySelector(`[data-day='${day}'][data-month='${month}'][data-year='${year}']`);
+      if (cell) {
+        const entry = document.createElement("div");
+        entry.textContent = desc;
+        entry.style.fontSize = "0.85em";
+        entry.style.marginTop = "5px";
+        cell.appendChild(entry);
+      }
+
+      document.getElementById("eventDate").value = "";
+      document.getElementById("eventInput").value = "";
+    }
+  });
+});
+
+// Three-dot menu toggle functionality
+document.querySelectorAll(".tile-menu-btn").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll(".tile-menu").forEach(m => {
+      if (m !== menu) m.style.display = "none";
+    });
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  });
+});
+
+window.addEventListener("click", () => {
+  document.querySelectorAll(".tile-menu").forEach(m => m.style.display = "none");
+});
+
+
+function saveData() {
+  const data = {
+    coins: document.getElementById("coinCount").textContent,
+    tasks: document.getElementById("taskList").innerHTML,
+    shop: document.getElementById("shopList").innerHTML,
+    purchased: document.getElementById("purchasedList").innerHTML,
+    schedule: document.getElementById("scheduleList").innerHTML,
+    events: document.getElementById("calendar").innerHTML
+  };
+  localStorage.setItem("walterData", JSON.stringify(data));
+}
+
+function loadData() {
+  const data = JSON.parse(localStorage.getItem("walterData"));
+  if (!data) return;
+  document.getElementById("coinCount").textContent = data.coins || "0";
+  document.getElementById("taskList").innerHTML = data.tasks || "";
+  document.getElementById("shopList").innerHTML = data.shop || "";
+  document.getElementById("purchasedList").innerHTML = data.purchased || "";
+  document.getElementById("scheduleList").innerHTML = data.schedule || "";
+  document.getElementById("calendar").innerHTML = data.events || "";
+}
+
+// Save on unload
+window.addEventListener("beforeunload", saveData);
+window.addEventListener("load", loadData);
+
+</script>
+</body>
+</html>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const coinDisplay = document.getElementById("coinCount");
+  let coins = parseInt(coinDisplay.textContent);
+
+  function updateCoins(amount) {
+    coins += amount;
+    coinDisplay.textContent = coins;
+  }
+
+  document.getElementById("editToggle").addEventListener("change", (e) => {
+    const isEdit = e.target.checked;
+    document.querySelectorAll(".editable-only").forEach(el => {
+      el.style.display = isEdit ? "block" : "none";
+    });
+    document.querySelectorAll(".removable").forEach(btn => {
+      btn.style.display = isEdit ? "inline" : "none";
+    });
+  });
+
+  function createRemoveButton(row) {
+    const btn = document.createElement("button");
+    btn.textContent = "🗑️";
+    btn.className = "removable";
+    btn.style.display = document.getElementById("editToggle").checked ? "inline" : "none";
+    btn.onclick = () => {
+      row.remove();
+      sortScheduleTable();
+    };
+    return btn;
+  }
+
+  function getClockEmoji(hourStr) {
+    const hour = parseInt(hourStr);
+    const clockEmojis = {
+      1: "🕐", 2: "🕑", 3: "🕒", 4: "🕓", 5: "🕔", 6: "🕕",
+      7: "🕖", 8: "🕗", 9: "🕘", 10: "🕙", 11: "🕚", 12: "🕛"
+    };
+    return clockEmojis[hour] || "🕰️";
+  }
+
+  function addToPurchased(name, cost) {
+    const li = document.createElement("li");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.marginRight = "10px";
+    checkbox.onchange = () => {
+      li.style.textDecoration = checkbox.checked ? "line-through" : "none";
+    };
+    li.appendChild(checkbox);
+    li.appendChild(document.createTextNode(`${name} - ${cost} coins`));
+    document.getElementById("purchasedList").appendChild(li);
+  }
+
+  document.getElementById("addTaskBtn").addEventListener("click", () => {
+    const desc = document.getElementById("taskInput").value;
+    const reward = parseInt(document.getElementById("taskCoins").value);
+    if (desc && !isNaN(reward)) {
+      const li = document.createElement("li");
+      li.textContent = `${desc} - ${reward} coins `;
+      const toggle = document.createElement("button");
+      toggle.textContent = "✅ Done";
+      toggle.onclick = () => {
+        if (toggle.textContent === "✅ Done") {
+          updateCoins(reward);
+          toggle.textContent = "❌ Undo";
+        } else {
+          updateCoins(-reward);
+          toggle.textContent = "✅ Done";
+        }
+      };
+      li.appendChild(toggle);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("taskList").appendChild(li);
+      document.getElementById("taskInput").value = "";
+      document.getElementById("taskCoins").value = "";
+    }
+  });
+
+  document.getElementById("addShopBtn").addEventListener("click", () => {
+    const name = document.getElementById("shopItemInput").value;
+    const cost = parseInt(document.getElementById("shopItemCost").value);
+    if (name && !isNaN(cost)) {
+      const li = document.createElement("li");
+      li.textContent = `${name} - ${cost} coins `;
+      const buy = document.createElement("button");
+      buy.textContent = "Buy";
+      buy.onclick = () => {
+        if (coins >= cost) {
+          updateCoins(-cost);
+          addToPurchased(name, cost);
+          li.remove();
+        } else {
+          alert("Not enough coins!");
+        }
+      };
+      li.appendChild(buy);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("shopList").appendChild(li);
+      document.getElementById("shopItemInput").value = "";
+      document.getElementById("shopItemCost").value = "";
+    }
+  });
+
+  document.getElementById("addScheduleBtn").addEventListener("click", () => {
+    const time = document.getElementById("scheduleTime").value;
+    const task = document.getElementById("scheduleInput").value;
+    if (time && task) {
+      const [h, m] = time.split(":");
+      const hour12 = parseInt(h) % 12 === 0 ? 12 : parseInt(h) % 12;
+      const ampm = parseInt(h) >= 12 ? "PM" : "AM";
+      const formattedTime = hour12 + ":" + m + " " + ampm;
+
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-time", time); // for sorting
+
+      const tdTime = document.createElement("td");
+      const tdClock = document.createElement("td");
+      const tdTask = document.createElement("td");
+      const tdActions = document.createElement("td");
+
+      tdTime.textContent = formattedTime;
+      tdClock.textContent = getClockEmoji(hour12);
+      tdTask.textContent = task;
+      tdActions.appendChild(createRemoveButton(tr));
+
+      tr.appendChild(tdTime);
+      tr.appendChild(tdClock);
+      tr.appendChild(tdTask);
+      tr.appendChild(tdActions);
+
+      document.getElementById("scheduleList").appendChild(tr);
+      document.getElementById("scheduleTime").value = "";
+      document.getElementById("scheduleInput").value = "";
+
+      sortScheduleTable();
+    }
+  });
+
+  function sortScheduleTable() {
+    const tbody = document.getElementById("scheduleList");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      return a.getAttribute("data-time").localeCompare(b.getAttribute("data-time"));
+    });
+    tbody.innerHTML = "";
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  // Calendar view
+  const calendar = document.getElementById("calendar");
+  const monthLabel = document.getElementById("calendarMonth");
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
+
+  function buildCalendar(month, year) {
+    monthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" });
+
+    while (calendar.children.length > 7) {
+      calendar.removeChild(calendar.lastChild);
+    }
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const offset = (firstDay.getDay() + 6) % 7;
+
+    for (let i = 0; i < offset; i++) {
+      const empty = document.createElement("div");
+      calendar.appendChild(empty);
+    }
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dateCell = document.createElement("div");
+      dateCell.style.border = "1px solid #ccc";
+      dateCell.style.minHeight = "60px";
+      dateCell.style.padding = "5px";
+      dateCell.style.backgroundColor = "#fff";
+      dateCell.style.borderRadius = "8px";
+      dateCell.setAttribute("data-day", day);
+      dateCell.setAttribute("data-month", month);
+      dateCell.setAttribute("data-year", year);
+      const label = document.createElement("div");
+      label.style.fontWeight = "bold";
+      label.textContent = day;
+      dateCell.appendChild(label);
+      calendar.appendChild(dateCell);
+    }
+  }
+
+  buildCalendar(currentMonth, currentYear);
+
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("addEventBtn").addEventListener("click", () => {
+    const date = document.getElementById("eventDate").value;
+    const desc = document.getElementById("eventInput").value;
+    if (date && desc) {
+      const eventDate = new Date(date);
+      const day = eventDate.getDate();
+      const month = eventDate.getMonth();
+      const year = eventDate.getFullYear();
+
+      const cell = calendar.querySelector(`[data-day='${day}'][data-month='${month}'][data-year='${year}']`);
+      if (cell) {
+        const entry = document.createElement("div");
+        entry.textContent = desc;
+        entry.style.fontSize = "0.85em";
+        entry.style.marginTop = "5px";
+        cell.appendChild(entry);
+      }
+
+      document.getElementById("eventDate").value = "";
+      document.getElementById("eventInput").value = "";
+    }
+  });
+});
+
+// Three-dot menu toggle functionality
+document.querySelectorAll(".tile-menu-btn").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll(".tile-menu").forEach(m => {
+      if (m !== menu) m.style.display = "none";
+    });
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  });
+});
+
+window.addEventListener("click", () => {
+  document.querySelectorAll(".tile-menu").forEach(m => m.style.display = "none");
+});
+
+
+function saveData() {
+  const data = {
+    coins: document.getElementById("coinCount").textContent,
+    tasks: document.getElementById("taskList").innerHTML,
+    shop: document.getElementById("shopList").innerHTML,
+    purchased: document.getElementById("purchasedList").innerHTML,
+    schedule: document.getElementById("scheduleList").innerHTML,
+    events: document.getElementById("calendar").innerHTML
+  };
+  localStorage.setItem("walterData", JSON.stringify(data));
+}
+
+function loadData() {
+  const data = JSON.parse(localStorage.getItem("walterData"));
+  if (!data) return;
+  document.getElementById("coinCount").textContent = data.coins || "0";
+  document.getElementById("taskList").innerHTML = data.tasks || "";
+  document.getElementById("shopList").innerHTML = data.shop || "";
+  document.getElementById("purchasedList").innerHTML = data.purchased || "";
+  document.getElementById("scheduleList").innerHTML = data.schedule || "";
+  document.getElementById("calendar").innerHTML = data.events || "";
+}
+
+// Save on unload
+window.addEventListener("beforeunload", saveData);
+window.addEventListener("load", loadData);
+
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const coinDisplay = document.getElementById("coinCount");
+  let coins = parseInt(coinDisplay.textContent);
+
+  function updateCoins(amount) {
+    coins += amount;
+    coinDisplay.textContent = coins;
+  }
+
+  document.getElementById("editToggle").addEventListener("change", (e) => {
+    const isEdit = e.target.checked;
+    document.querySelectorAll(".editable-only").forEach(el => {
+      el.style.display = isEdit ? "block" : "none";
+    });
+    document.querySelectorAll(".removable").forEach(btn => {
+      btn.style.display = isEdit ? "inline" : "none";
+    });
+  });
+
+  function createRemoveButton(row) {
+    const btn = document.createElement("button");
+    btn.textContent = "🗑️";
+    btn.className = "removable";
+    btn.style.display = document.getElementById("editToggle").checked ? "inline" : "none";
+    btn.onclick = () => {
+      row.remove();
+      sortScheduleTable();
+    };
+    return btn;
+  }
+
+  function getClockEmoji(hourStr) {
+    const hour = parseInt(hourStr);
+    const clockEmojis = {
+      1: "🕐", 2: "🕑", 3: "🕒", 4: "🕓", 5: "🕔", 6: "🕕",
+      7: "🕖", 8: "🕗", 9: "🕘", 10: "🕙", 11: "🕚", 12: "🕛"
+    };
+    return clockEmojis[hour] || "🕰️";
+  }
+
+  function addToPurchased(name, cost) {
+    const li = document.createElement("li");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.marginRight = "10px";
+    checkbox.onchange = () => {
+      li.style.textDecoration = checkbox.checked ? "line-through" : "none";
+    };
+    li.appendChild(checkbox);
+    li.appendChild(document.createTextNode(`${name} - ${cost} coins`));
+    document.getElementById("purchasedList").appendChild(li);
+  }
+
+  document.getElementById("addTaskBtn").addEventListener("click", () => {
+    const desc = document.getElementById("taskInput").value;
+    const reward = parseInt(document.getElementById("taskCoins").value);
+    if (desc && !isNaN(reward)) {
+      const li = document.createElement("li");
+      li.textContent = `${desc} - ${reward} coins `;
+      const toggle = document.createElement("button");
+      toggle.textContent = "✅ Done";
+      toggle.onclick = () => {
+        if (toggle.textContent === "✅ Done") {
+          updateCoins(reward);
+          toggle.textContent = "❌ Undo";
+        } else {
+          updateCoins(-reward);
+          toggle.textContent = "✅ Done";
+        }
+      };
+      li.appendChild(toggle);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("taskList").appendChild(li);
+      document.getElementById("taskInput").value = "";
+      document.getElementById("taskCoins").value = "";
+    }
+  });
+
+  document.getElementById("addShopBtn").addEventListener("click", () => {
+    const name = document.getElementById("shopItemInput").value;
+    const cost = parseInt(document.getElementById("shopItemCost").value);
+    if (name && !isNaN(cost)) {
+      const li = document.createElement("li");
+      li.textContent = `${name} - ${cost} coins `;
+      const buy = document.createElement("button");
+      buy.textContent = "Buy";
+      buy.onclick = () => {
+        if (coins >= cost) {
+          updateCoins(-cost);
+          addToPurchased(name, cost);
+          li.remove();
+        } else {
+          alert("Not enough coins!");
+        }
+      };
+      li.appendChild(buy);
+      li.appendChild(createRemoveButton(li));
+      document.getElementById("shopList").appendChild(li);
+      document.getElementById("shopItemInput").value = "";
+      document.getElementById("shopItemCost").value = "";
+    }
+  });
+
+  document.getElementById("addScheduleBtn").addEventListener("click", () => {
+    const time = document.getElementById("scheduleTime").value;
+    const task = document.getElementById("scheduleInput").value;
+    if (time && task) {
+      const [h, m] = time.split(":");
+      const hour12 = parseInt(h) % 12 === 0 ? 12 : parseInt(h) % 12;
+      const ampm = parseInt(h) >= 12 ? "PM" : "AM";
+      const formattedTime = hour12 + ":" + m + " " + ampm;
+
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-time", time); // for sorting
+
+      const tdTime = document.createElement("td");
+      const tdClock = document.createElement("td");
+      const tdTask = document.createElement("td");
+      const tdActions = document.createElement("td");
+
+      tdTime.textContent = formattedTime;
+      tdClock.textContent = getClockEmoji(hour12);
+      tdTask.textContent = task;
+      tdActions.appendChild(createRemoveButton(tr));
+
+      tr.appendChild(tdTime);
+      tr.appendChild(tdClock);
+      tr.appendChild(tdTask);
+      tr.appendChild(tdActions);
+
+      document.getElementById("scheduleList").appendChild(tr);
+      document.getElementById("scheduleTime").value = "";
+      document.getElementById("scheduleInput").value = "";
+
+      sortScheduleTable();
+    }
+  });
+
+  function sortScheduleTable() {
+    const tbody = document.getElementById("scheduleList");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      return a.getAttribute("data-time").localeCompare(b.getAttribute("data-time"));
+    });
+    tbody.innerHTML = "";
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  // Calendar view
+  const calendar = document.getElementById("calendar");
+  const monthLabel = document.getElementById("calendarMonth");
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
+
+  function buildCalendar(month, year) {
+    monthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" });
+
+    while (calendar.children.length > 7) {
+      calendar.removeChild(calendar.lastChild);
+    }
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const offset = (firstDay.getDay() + 6) % 7;
+
+    for (let i = 0; i < offset; i++) {
+      const empty = document.createElement("div");
+      calendar.appendChild(empty);
+    }
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dateCell = document.createElement("div");
+      dateCell.style.border = "1px solid #ccc";
+      dateCell.style.minHeight = "60px";
+      dateCell.style.padding = "5px";
+      dateCell.style.backgroundColor = "#fff";
+      dateCell.style.borderRadius = "8px";
+      dateCell.setAttribute("data-day", day);
+      dateCell.setAttribute("data-month", month);
+      dateCell.setAttribute("data-year", year);
+      const label = document.createElement("div");
+      label.style.fontWeight = "bold";
+      label.textContent = day;
+      dateCell.appendChild(label);
+      calendar.appendChild(dateCell);
+    }
+  }
+
+  buildCalendar(currentMonth, currentYear);
+
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    buildCalendar(currentMonth, currentYear);
+  });
+
+  document.getElementById("addEventBtn").addEventListener("click", () => {
+    const date = document.getElementById("eventDate").value;
+    const desc = document.getElementById("eventInput").value;
+    if (date && desc) {
+      const eventDate = new Date(date);
+      const day = eventDate.getDate();
+      const month = eventDate.getMonth();
+      const year = eventDate.getFullYear();
+
+      const cell = calendar.querySelector(`[data-day='${day}'][data-month='${month}'][data-year='${year}']`);
+      if (cell) {
+        const entry = document.createElement("div");
+        entry.textContent = desc;
+        entry.style.fontSize = "0.85em";
+        entry.style.marginTop = "5px";
+        cell.appendChild(entry);
+      }
+
+      document.getElementById("eventDate").value = "";
+      document.getElementById("eventInput").value = "";
+    }
+  });
+});
+
+// Three-dot menu toggle functionality
+document.querySelectorAll(".tile-menu-btn").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = btn.nextElementSibling;
+    document.querySelectorAll(".tile-menu").forEach(m => {
+      if (m !== menu) m.style.display = "none";
+    });
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  });
+});
+
+window.addEventListener("click", () => {
+  document.querySelectorAll(".tile-menu").forEach(m => m.style.display = "none");
+});
+
+
+function saveData() {
+  const data = {
+    coins: document.getElementById("coinCount").textContent,
+    tasks: document.getElementById("taskList").innerHTML,
+    shop: document.getElementById("shopList").innerHTML,
+    purchased: document.getElementById("purchasedList").innerHTML,
+    schedule: document.getElementById("scheduleList").innerHTML,
+    events: document.getElementById("calendar").innerHTML
+  };
+  localStorage.setItem("walterData", JSON.stringify(data));
+}
+
+function loadData() {
+  const data = JSON.parse(localStorage.getItem("walterData"));
+  if (!data) return;
+  document.getElementById("coinCount").textContent = data.coins || "0";
+  document.getElementById("taskList").innerHTML = data.tasks || "";
+  document.getElementById("shopList").innerHTML = data.shop || "";
+  document.getElementById("purchasedList").innerHTML = data.purchased || "";
+  document.getElementById("scheduleList").innerHTML = data.schedule || "";
+  document.getElementById("calendar").innerHTML = data.events || "";
+}
+
+// Save on unload
+window.addEventListener("beforeunload", saveData);
+window.addEventListener("load", loadData);
+
+</script>
+<script>
+function toggleEditChild() {
+  const form = document.getElementById("childEditForm");
+  const currentName = document.getElementById("childName").textContent;
+  const currentAge = document.getElementById("childAge").textContent;
+  const currentAvatar = document.getElementById("childAvatar").textContent.trim();
+  document.getElementById("editChildName").value = currentName;
+  document.getElementById("editChildAge").value = currentAge;
+  document.getElementById("editChildAvatar").value = currentAvatar;
+  form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+function saveChildInfo() {
+  const newName = document.getElementById("editChildName").value;
+  const newAge = document.getElementById("editChildAge").value;
+  const newAvatar = document.getElementById("editChildAvatar").value;
+  document.getElementById("childName").textContent = newName;
+  document.getElementById("childAge").textContent = newAge;
+  document.getElementById("childAvatar").textContent = newAvatar;
+  document.getElementById("childEditForm").style.display = "none";
+}
+</script><script>localStorage.clear();</script></body>
+</html>
