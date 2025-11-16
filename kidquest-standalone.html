@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KidQuest - Task & Reward Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // Load saved data from localStorage
+    function loadData() {
+      const saved = localStorage.getItem('kidQuestData');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          return data;
+        } catch (e) {
+          console.error('Error loading saved data:', e);
+        }
+      }
+      return null;
+    }
+
+    // Save data to localStorage
+    function saveData() {
+      const dataToSave = {
+        kids: state.kids,
+        tasks: state.tasks,
+        rewards: state.rewards,
+        taskCompletions: state.taskCompletions,
+        rewardPurchases: state.rewardPurchases,
+        events: state.events,
+        schedules: state.schedules
+      };
+      localStorage.setItem('kidQuestData', JSON.stringify(dataToSave));
+    }
+
+    // Initialize state with saved data or defaults
+    const savedData = loadData();
+    
+    // Simple state management
+    const state = {
+      mode: 'kids',
+      adminPassword: '',
+      isAdminLocked: true,
+      activeTab: 'tasks',
+      selectedKid: 0,
+      selectedDate: new Date().toISOString().split('T')[0],
+      currentMonth: new Date(),
+      selectedCalendarDate: null,
+      showAddTask: false,
+      showAddReward: false,
+      showAddEvent: false,
+      showAddSchedule: false,
+      editingEvent: null,
+      editingSchedule: null,
+      showAddKid: false,
+      editingKid: null,
+      kids: savedData?.kids || [
+        { id: 1, name: 'Emma', points: 450, avatar: '👧', color: 'from-pink-500 to-rose-500' },
+        { id: 2, name: 'Lucas', points: 320, avatar: '👦', color: 'from-blue-500 to-cyan-500' }
+      ],
+      tasks: savedData?.tasks || [
+        { id: 1, title: 'Make Your Bed', points: 10, icon: '🛏️', category: 'Morning' },
+        { id: 2, title: 'Brush Teeth', points: 5, icon: '🪥', category: 'Morning' },
+        { id: 3, title: 'Homework Time', points: 20, icon: '📚', category: 'Afternoon' },
+        { id: 4, title: 'Tidy Room', points: 15, icon: '🧹', category: 'Evening' }
+      ],
+      rewards: savedData?.rewards || [
+        { id: 1, title: 'Extra Screen Time', cost: 100, icon: '📱' },
+        { id: 2, title: 'Choose Dinner', cost: 150, icon: '🍕' },
+        { id: 3, title: 'Movie Night', cost: 120, icon: '🎬' }
+      ],
+      taskCompletions: savedData?.taskCompletions || [],
+      rewardPurchases: savedData?.rewardPurchases || [],
+      events: savedData?.events || [
+        { id: 1, kidId: 1, title: 'Birthday Party', date: '2025-11-20', icon: '🎂', color: 'bg-pink-500', recurrence: 'none' },
+        { id: 2, kidId: 2, title: 'Soccer Game', date: '2025-11-18', icon: '⚽', color: 'bg-blue-500', recurrence: 'none' }
+      ],
+      schedules: savedData?.schedules || [
+        { id: 1, kidId: 1, time: '07:00', title: 'Wake Up', icon: '⏰', color: 'bg-yellow-500' },
+        { id: 2, kidId: 1, time: '08:00', title: 'School', icon: '🎒', color: 'bg-blue-500' },
+        { id: 3, kidId: 1, time: '15:30', title: 'Homework', icon: '📚', color: 'bg-purple-500' },
+        { id: 4, kidId: 1, time: '20:00', title: 'Bedtime', icon: '🌙', color: 'bg-indigo-500' }
+      ],
+      newTask: { title: '', points: 10, icon: '⭐', category: 'Daily' },
+      newReward: { title: '', cost: 100, icon: '🎁' },
+      newEvent: { title: '', date: '', icon: '📅', color: 'bg-blue-500', recurrence: 'none' },
+      newSchedule: { time: '09:00', title: '', icon: '⏰', color: 'bg-blue-500' },
+      newKid: { name: '', avatar: '👦', color: 'from-blue-500 to-cyan-500' }
+    };
+
+    const eventColorOptions = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500'];
+    const kidColorOptions = ['from-pink-500 to-rose-500', 'from-blue-500 to-cyan-500', 'from-purple-500 to-violet-500', 'from-green-500 to-emerald-500', 'from-orange-500 to-amber-500', 'from-red-500 to-pink-500', 'from-indigo-500 to-purple-500', 'from-teal-500 to-cyan-500'];
+    const avatarOptions = ['👦', '👧', '🧒', '👶', '🧑', '👨', '👩', '🦸‍♂️', '🦸‍♀️', '🧙‍♂️', '🧙‍♀️', '🧚‍♀️', '🧚‍♂️', '🦄', '🐱', '🐶', '🐻', '🐼', '🐨', '🦁'];
+
+    // Helper function to check if an event should appear on a date considering recurrence
+    function doesEventOccurOnDate(event, dateStr) {
+      if (event.date === dateStr) return true;
+      if (event.recurrence === 'none') return false;
+      
+      const eventDate = new Date(event.date + 'T00:00:00');
+      const checkDate = new Date(dateStr + 'T00:00:00');
+      
+      if (checkDate < eventDate) return false; // Event hasn't started yet
+      
+      const daysDiff = Math.floor((checkDate - eventDate) / (1000 * 60 * 60 * 24));
+      
+      if (event.recurrence === 'daily') return true;
+      if (event.recurrence === 'weekly') return daysDiff % 7 === 0;
+      if (event.recurrence === 'monthly') {
+        return checkDate.getDate() === eventDate.getDate();
+      }
+      if (event.recurrence === 'yearly') {
+        return checkDate.getDate() === eventDate.getDate() && checkDate.getMonth() === eventDate.getMonth();
+      }
+      
+      return false;
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      app.innerHTML = getHTML();
+      attachEventListeners();
+      saveData(); // Save after every render
+    }
+
+    function getCurrentKid() {
+      return state.kids[state.selectedKid];
+    }
+
+    function isTaskCompleted(taskId, kidId, date) {
+      return state.taskCompletions.some(tc => tc.taskId === taskId && tc.kidId === kidId && tc.date === date);
+    }
+
+    function completeTask(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      const currentKid = getCurrentKid();
+      const alreadyCompleted = isTaskCompleted(taskId, currentKid.id, state.selectedDate);
+      
+      if (alreadyCompleted) {
+        state.taskCompletions = state.taskCompletions.filter(tc => !(tc.taskId === taskId && tc.kidId === currentKid.id && tc.date === state.selectedDate));
+        state.kids = state.kids.map(k => k.id === currentKid.id ? { ...k, points: k.points - task.points } : k);
+      } else {
+        state.taskCompletions.push({ taskId, kidId: currentKid.id, date: state.selectedDate, taskTitle: task.title, taskIcon: task.icon, points: task.points });
+        state.kids = state.kids.map(k => k.id === currentKid.id ? { ...k, points: k.points + task.points } : k);
+      }
+      render();
+    }
+
+    function redeemReward(reward) {
+      const currentKid = getCurrentKid();
+      if (currentKid.points >= reward.cost) {
+        state.kids = state.kids.map(k => k.id === currentKid.id ? { ...k, points: k.points - reward.cost } : k);
+        state.rewardPurchases.push({ id: Date.now(), kidId: currentKid.id, date: new Date().toISOString().split('T')[0], rewardTitle: reward.title, rewardIcon: reward.icon, cost: reward.cost, fulfilled: false });
+        render();
+      }
+    }
+
+    function groupTasks() {
+      return state.tasks.reduce((acc, task) => {
+        if (!acc[task.category]) acc[task.category] = [];
+        acc[task.category].push(task);
+        return acc;
+      }, {});
+    }
+
+    function getHTML() {
+      const currentKid = getCurrentKid();
+      
+      if (state.mode === 'admin' && state.isAdminLocked) {
+        return `
+          <div class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+              <div class="text-center mb-6">
+                <svg class="mx-auto text-purple-600 mb-4" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <h2 class="text-2xl font-bold text-gray-800">Admin Access</h2>
+              </div>
+              <input id="adminPasswordInput" type="password" placeholder="Password" class="w-full p-4 border-2 border-gray-300 rounded-lg mb-4 text-lg" />
+              <button onclick="handleAdminLogin()" class="w-full bg-purple-600 text-white py-4 rounded-lg font-semibold hover:bg-purple-700">Unlock</button>
+              <button onclick="state.mode='kids'; render();" class="w-full mt-3 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300">Kids Mode</button>
+              <p class="text-xs text-gray-500 text-center mt-4">Password: admin123</p>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.mode === 'admin') {
+        return getAdminHTML();
+      }
+
+      return getKidsHTML();
+    }
+
+    function getAdminHTML() {
+      const currentKid = getCurrentKid();
+      let content = '';
+
+      if (state.activeTab === 'kids') {
+        content = `
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Manage Kids</h2>
+            <button onclick="state.showAddKid=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Child
+            </button>
+          </div>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${state.kids.map(kid => `
+              <div class="bg-white rounded-xl p-6 shadow-lg">
+                <div class="flex items-start gap-4 mb-4">
+                  <span class="text-5xl">${kid.avatar}</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-bold">${kid.name}</h3>
+                    <div class="inline-block px-3 py-1 rounded-full text-white text-sm bg-gradient-to-r ${kid.color} mt-1">${kid.points} points</div>
+                  </div>
+                </div>
+                <div class="flex gap-2 mb-2">
+                  <button onclick="adjustPoints(${kid.id}, 10)" class="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 text-sm">+10</button>
+                  <button onclick="adjustPoints(${kid.id}, -10)" class="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm">-10</button>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="editKid(${kid.id})" class="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">Edit</button>
+                  <button onclick="deleteKid(${kid.id})" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 text-sm">Delete</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (state.activeTab === 'tasks') {
+        const grouped = groupTasks();
+        content = `
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Manage Tasks</h2>
+            <button onclick="state.showAddTask=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Task
+            </button>
+          </div>
+          ${Object.entries(grouped).map(([category, tasks]) => `
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold text-gray-700 mb-4">${category}</h3>
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${tasks.map(task => `
+                  <div class="bg-white rounded-xl p-5 shadow">
+                    <div class="flex items-center gap-3">
+                      <span class="text-3xl">${task.icon}</span>
+                      <div>
+                        <h4 class="font-semibold text-lg">${task.title}</h4>
+                        <div class="text-sm text-purple-600">${task.points} points</div>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        `;
+      } else if (state.activeTab === 'rewards') {
+        content = `
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Manage Rewards</h2>
+            <button onclick="state.showAddReward=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Reward
+            </button>
+          </div>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${state.rewards.map(reward => `
+              <div class="bg-white rounded-xl p-5 shadow">
+                <div class="flex items-center gap-3">
+                  <span class="text-4xl">${reward.icon}</span>
+                  <div>
+                    <h4 class="font-semibold text-lg">${reward.title}</h4>
+                    <div class="text-sm text-orange-600">${reward.cost} points</div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (state.activeTab === 'schedules') {
+        content = `
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Manage Daily Schedules</h2>
+            <button onclick="state.showAddSchedule=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Schedule Item
+            </button>
+          </div>
+          <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Child</label>
+            <div class="flex gap-3 flex-wrap">
+              ${state.kids.map((kid, index) => `
+                <button onclick="state.selectedKid=${index}; render();" class="flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${state.selectedKid === index ? `bg-gradient-to-r ${kid.color} text-white shadow-lg` : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
+                  <span class="text-xl">${kid.avatar}</span>
+                  <span class="font-semibold">${kid.name}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <div class="space-y-3">
+            ${state.schedules.filter(s => s.kidId === currentKid.id).sort((a, b) => a.time.localeCompare(b.time)).map(schedule => `
+              <div class="bg-white rounded-xl p-4 shadow-md border-l-4 ${schedule.color.replace('bg-', 'border-')} flex items-center gap-4">
+                <div class="text-2xl font-bold text-gray-700 min-w-[80px]">${schedule.time}</div>
+                <span class="text-3xl">${schedule.icon}</span>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-lg text-gray-800">${schedule.title}</h4>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="editSchedule(${schedule.id})" class="px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 text-sm font-semibold">Edit</button>
+                  <button onclick="deleteSchedule(${schedule.id})" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm font-semibold">Delete</button>
+                </div>
+              </div>
+            `).join('')}
+            ${state.schedules.filter(s => s.kidId === currentKid.id).length === 0 ? `
+              <div class="text-center py-12 bg-white rounded-xl shadow">
+                <svg class="mx-auto mb-4 text-gray-300" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-600 mb-2">No schedule items yet</h3>
+                <p class="text-gray-500">Create a daily schedule to help organize your child's day</p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else if (state.activeTab === 'events') {
+        content = `
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Manage Events</h2>
+            <button onclick="state.showAddEvent=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Event
+            </button>
+          </div>
+          <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Child</label>
+            <div class="flex gap-3 flex-wrap">
+              ${state.kids.map((kid, index) => `
+                <button onclick="state.selectedKid=${index}; render();" class="flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${state.selectedKid === index ? `bg-gradient-to-r ${kid.color} text-white shadow-lg` : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
+                  <span class="text-xl">${kid.avatar}</span>
+                  <span class="font-semibold">${kid.name}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${state.events.filter(e => e.kidId === currentKid.id).map(event => `
+              <div class="${event.color} text-white rounded-xl p-5 shadow">
+                <div class="flex items-center gap-3 mb-3">
+                  <span class="text-4xl">${event.icon}</span>
+                  <div>
+                    <h4 class="font-semibold text-lg">${event.title}</h4>
+                    <div class="text-sm">${new Date(event.date + 'T00:00:00').toLocaleDateString()}</div>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="editEvent(${event.id})" class="flex-1 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold">Edit</button>
+                  <button onclick="deleteEvent(${event.id})" class="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold">Delete</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else if (state.activeTab === 'purchases') {
+        content = `
+          <h2 class="text-2xl font-bold text-gray-800 mb-6">Purchased Rewards</h2>
+          ${state.rewardPurchases.length === 0 ? `
+            <div class="bg-white rounded-xl p-12 text-center shadow">
+              <svg class="mx-auto text-gray-300 mb-4" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+              </svg>
+              <h3 class="text-xl font-semibold text-gray-600">No purchases yet</h3>
+            </div>
+          ` : `
+            <div class="space-y-4">
+              ${state.rewardPurchases.map(purchase => {
+                const kid = state.kids.find(k => k.id === purchase.kidId);
+                return `
+                  <div class="bg-white rounded-xl p-5 shadow ${purchase.fulfilled ? 'opacity-60' : ''}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center text-3xl ${purchase.fulfilled ? 'bg-gray-200' : 'bg-gradient-to-r from-yellow-400 to-orange-400'}">
+                          ${purchase.rewardIcon}
+                        </div>
+                        <div>
+                          <h4 class="font-bold text-lg">${purchase.rewardTitle}</h4>
+                          <div class="text-sm text-gray-600">${kid?.name} • ${new Date(purchase.date + 'T00:00:00').toLocaleDateString()}</div>
+                          ${purchase.fulfilled ? '<div class="mt-2 inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">✓ Fulfilled</div>' : ''}
+                        </div>
+                      </div>
+                      <button onclick="toggleRewardFulfillment(${purchase.id})" class="px-4 py-2 rounded-lg font-semibold ${purchase.fulfilled ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-green-500 text-white hover:bg-green-600'}">
+                        ${purchase.fulfilled ? 'Undo' : 'Mark Done'}
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        `;
+      }
+
+      return `
+        <div class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200">
+          <div class="bg-white shadow-lg border-b-4 border-purple-600">
+            <div class="max-w-7xl mx-auto px-4 py-6">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-600">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/><path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"/><path d="M1 12h6m6 0h6"/><path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"/>
+                  </svg>
+                  <h1 class="text-3xl font-bold text-gray-800">Admin Centre</h1>
+                </div>
+                <button onclick="state.mode='kids'; state.isAdminLocked=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-semibold">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  Kids Mode
+                </button>
+              </div>
+              <div class="flex gap-2 border-b border-gray-200 overflow-x-auto">
+                ${['kids', 'tasks', 'rewards', 'events', 'purchases'].map(tab => {
+                  const labels = { kids: '👥 Kids', tasks: '📋 Tasks', rewards: '🎁 Rewards', events: '📅 Events', purchases: '🏆 Purchases' };
+                  return `<button onclick="state.activeTab='${tab}'; render();" class="px-6 py-3 font-semibold whitespace-nowrap ${state.activeTab === tab ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}">${labels[tab]}</button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="max-w-7xl mx-auto px-4 py-8">${content}</div>
+          ${getModalsHTML()}
+        </div>
+      `;
+    }
+
+    function getKidsHTML() {
+      const currentKid = getCurrentKid();
+      let content = '';
+
+      if (state.activeTab === 'tasks') {
+        const grouped = groupTasks();
+        content = `
+          <div class="bg-white rounded-xl shadow-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+              <button onclick="changeDate(-1)" class="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div class="text-center">
+                <div class="text-lg font-bold text-gray-800">${state.selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : new Date(state.selectedDate + 'T00:00:00').toLocaleDateString()}</div>
+                <div class="text-sm text-gray-600">${state.selectedDate}</div>
+              </div>
+              <button onclick="changeDate(1)" class="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800 mb-6">Complete Your Tasks</h2>
+          ${Object.entries(grouped).map(([category, tasks]) => `
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold text-gray-700 mb-4">${category}</h3>
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${tasks.map(task => {
+                  const completed = isTaskCompleted(task.id, currentKid.id, state.selectedDate);
+                  return `
+                    <div onclick="completeTask(${task.id})" class="p-5 rounded-xl cursor-pointer transition-all ${completed ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg' : 'bg-white hover:shadow-lg'}">
+                      <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                          <span class="text-3xl">${task.icon}</span>
+                          <div>
+                            <h4 class="font-semibold text-lg">${task.title}</h4>
+                            <div class="flex items-center gap-1 text-sm ${completed ? 'text-white' : 'text-purple-600'}">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                              ${task.points} points
+                            </div>
+                          </div>
+                        </div>
+                        ${completed ? '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `).join('')}
+        `;
+      } else if (state.activeTab === 'rewards') {
+        content = `
+          <div class="bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-xl p-6 mb-6">
+            <h2 class="text-3xl font-bold mb-2">Your Points</h2>
+            <div class="text-5xl font-bold flex items-center gap-3">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              ${currentKid.points}
+            </div>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-800 mb-6">Reward Store</h3>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${state.rewards.map(reward => {
+              const canAfford = currentKid.points >= reward.cost;
+              return `
+                <div onclick="${canAfford ? `redeemReward(${JSON.stringify(reward).replace(/"/g, '&quot;')})` : ''}" class="p-5 rounded-xl transition-all ${canAfford ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white cursor-pointer hover:shadow-xl hover:scale-105' : 'bg-white text-gray-800 opacity-60'}">
+                  <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="text-4xl">${reward.icon}</span>
+                      <div>
+                        <h4 class="font-semibold text-lg">${reward.title}</h4>
+                        <div class="flex items-center gap-1 text-sm">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                          </svg>
+                          ${reward.cost} points
+                        </div>
+                      </div>
+                    </div>
+                    ${!canAfford ? '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' : ''}
+                  </div>
+                  ${canAfford ? '<div class="bg-white/20 rounded-lg px-3 py-2 text-sm font-semibold">Tap to Redeem!</div>' : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } else if (state.activeTab === 'schedule') {
+        content = getScheduleHTML();
+      } else if (state.activeTab === 'calendar') {
+        content = getCalendarHTML();
+      }
+
+      return `
+        <div class="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100">
+          <div class="bg-white shadow-lg">
+            <div class="max-w-6xl mx-auto px-4 py-6">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="text-4xl">🏆</div>
+                  <div>
+                    <h1 class="text-3xl font-bold text-purple-600">KidQuest</h1>
+                    <p class="text-gray-600 text-sm">Complete tasks, earn rewards!</p>
+                  </div>
+                </div>
+                <button onclick="state.mode='admin'; state.isAdminLocked=true; render();" class="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/>
+                  </svg>
+                  Admin
+                </button>
+              </div>
+              <div class="flex gap-3 overflow-x-auto pb-2">
+                ${state.kids.map((kid, index) => `
+                  <button onclick="state.selectedKid=${index}; render();" class="flex items-center gap-3 px-5 py-3 rounded-xl transition-all ${state.selectedKid === index ? `bg-gradient-to-r ${kid.color} text-white shadow-lg scale-105` : 'bg-gray-100 text-gray-700'}">
+                    <span class="text-2xl">${kid.avatar}</span>
+                    <div class="text-left">
+                      <div class="font-bold">${kid.name}</div>
+                      <div class="text-sm flex items-center gap-1">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        ${kid.points} pts
+                      </div>
+                    </div>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+            <div class="max-w-6xl mx-auto px-4">
+              <div class="flex gap-2 border-b border-gray-200">
+                ${['tasks', 'rewards', 'schedule', 'calendar'].map(tab => {
+                  const labels = { tasks: '📋 Tasks', rewards: '🎁 Rewards', schedule: '📅 Schedule', calendar: '🗓️ Calendar' };
+                  return `<button onclick="state.activeTab='${tab}'; render();" class="px-6 py-3 font-semibold ${state.activeTab === tab ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}">${labels[tab]}</button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="max-w-6xl mx-auto px-4 py-8">${content}</div>
+        </div>
+      `;
+    }
+
+    function getModalsHTML() {
+      let modals = '';
+      
+      if (state.showAddTask) {
+        modals += `
+          <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 class="text-xl font-bold mb-4">Add Task</h3>
+              <input id="taskTitle" type="text" placeholder="Task name" value="${state.newTask.title}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="taskPoints" type="number" placeholder="Points" value="${state.newTask.points}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="taskIcon" type="text" placeholder="Icon (emoji)" value="${state.newTask.icon}" class="w-full p-3 border rounded-lg mb-3" />
+              <select id="taskCategory" class="w-full p-3 border rounded-lg mb-4">
+                <option ${state.newTask.category === 'Morning' ? 'selected' : ''}>Morning</option>
+                <option ${state.newTask.category === 'Afternoon' ? 'selected' : ''}>Afternoon</option>
+                <option ${state.newTask.category === 'Evening' ? 'selected' : ''}>Evening</option>
+                <option ${state.newTask.category === 'Daily' ? 'selected' : ''}>Daily</option>
+              </select>
+              <div class="flex gap-3">
+                <button onclick="addTask()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700">Add</button>
+                <button onclick="state.showAddTask=false; state.newTask={title:'',points:10,icon:'⭐',category:'Daily'}; render();" class="flex-1 bg-gray-200 py-3 rounded-lg hover:bg-gray-300">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.showAddReward) {
+        modals += `
+          <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 class="text-xl font-bold mb-4">Add Reward</h3>
+              <input id="rewardTitle" type="text" placeholder="Reward name" value="${state.newReward.title}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="rewardCost" type="number" placeholder="Cost in points" value="${state.newReward.cost}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="rewardIcon" type="text" placeholder="Icon (emoji)" value="${state.newReward.icon}" class="w-full p-3 border rounded-lg mb-4" />
+              <div class="flex gap-3">
+                <button onclick="addReward()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700">Add</button>
+                <button onclick="state.showAddReward=false; state.newReward={title:'',cost:100,icon:'🎁'}; render();" class="flex-1 bg-gray-200 py-3 rounded-lg hover:bg-gray-300">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.showAddEvent || state.editingEvent) {
+        const event = state.editingEvent || state.newEvent;
+        const isEditing = !!state.editingEvent;
+        modals += `
+          <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 class="text-xl font-bold mb-4">${isEditing ? 'Edit Event' : 'Add Event'}</h3>
+              <input id="eventTitle" type="text" placeholder="Event name" value="${event.title}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="eventDate" type="date" value="${event.date}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="eventIcon" type="text" placeholder="Icon (emoji)" value="${event.icon}" class="w-full p-3 border rounded-lg mb-3" />
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Recurrence</label>
+              <select id="eventRecurrence" class="w-full p-3 border rounded-lg mb-3">
+                <option value="none" ${event.recurrence === 'none' ? 'selected' : ''}>No Repeat</option>
+                <option value="daily" ${event.recurrence === 'daily' ? 'selected' : ''}>Daily</option>
+                <option value="weekly" ${event.recurrence === 'weekly' ? 'selected' : ''}>Weekly</option>
+                <option value="monthly" ${event.recurrence === 'monthly' ? 'selected' : ''}>Monthly</option>
+                <option value="yearly" ${event.recurrence === 'yearly' ? 'selected' : ''}>Yearly</option>
+              </select>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Choose Color</label>
+              <div class="grid grid-cols-3 gap-2 mb-4">
+                ${eventColorOptions.map(color => `
+                  <button onclick="updateEventField('color', '${color}')" class="h-12 rounded-lg ${color} transition-all ${event.color === color ? 'ring-4 ring-purple-600' : ''}"></button>
+                `).join('')}
+              </div>
+              <div class="flex gap-3">
+                <button onclick="${isEditing ? 'saveEditedEvent()' : 'addEvent()'}" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700">${isEditing ? 'Update' : 'Add'}</button>
+                <button onclick="state.editingEvent=null; state.showAddEvent=false; state.newEvent={title:'',date:'',icon:'📅',color:'bg-blue-500'}; render();" class="flex-1 bg-gray-200 py-3 rounded-lg hover:bg-gray-300">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.showAddSchedule || state.editingSchedule) {
+        const schedule = state.editingSchedule || state.newSchedule;
+        const isEditing = !!state.editingSchedule;
+        modals += `
+          <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 class="text-xl font-bold mb-4">${isEditing ? 'Edit Schedule Item' : 'Add Schedule Item'}</h3>
+              <input id="scheduleTime" type="time" value="${schedule.time}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="scheduleTitle" type="text" placeholder="Activity name" value="${schedule.title}" class="w-full p-3 border rounded-lg mb-3" />
+              <input id="scheduleIcon" type="text" placeholder="Icon (emoji)" value="${schedule.icon}" class="w-full p-3 border rounded-lg mb-3" />
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Choose Color</label>
+              <div class="grid grid-cols-3 gap-2 mb-4">
+                ${eventColorOptions.map(color => `
+                  <button onclick="updateScheduleField('color', '${color}')" class="h-12 rounded-lg ${color} transition-all ${schedule.color === color ? 'ring-4 ring-purple-600' : ''}"></button>
+                `).join('')}
+              </div>
+              <div class="flex gap-3">
+                <button onclick="${isEditing ? 'saveEditedSchedule()' : 'addSchedule()'}" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700">${isEditing ? 'Update' : 'Add'}</button>
+                <button onclick="state.editingSchedule=null; state.showAddSchedule=false; state.newSchedule={time:'09:00',title:'',icon:'⏰',color:'bg-blue-500'}; render();" class="flex-1 bg-gray-200 py-3 rounded-lg hover:bg-gray-300">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.showAddKid || state.editingKid) {
+        const kid = state.editingKid || state.newKid;
+        const isEditing = !!state.editingKid;
+        modals += `
+          <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+              <h3 class="text-xl font-bold mb-4">${isEditing ? 'Edit Child' : 'Add Child'}</h3>
+              <input id="kidName" type="text" placeholder="Child's name" value="${kid.name}" class="w-full p-3 border rounded-lg mb-3" />
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Choose Avatar</label>
+              <div class="grid grid-cols-5 gap-2 mb-4 max-h-48 overflow-y-auto border rounded-lg p-2">
+                ${avatarOptions.map(avatar => `
+                  <button onclick="updateKidField('avatar', '${avatar}')" class="text-4xl p-2 rounded-lg transition-all hover:bg-gray-100 ${kid.avatar === avatar ? 'bg-purple-100 ring-2 ring-purple-600' : ''}">${avatar}</button>
+                `).join('')}
+              </div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Choose Color Theme</label>
+              <div class="grid grid-cols-2 gap-2 mb-4">
+                ${kidColorOptions.map(color => `
+                  <button onclick="updateKidField('color', '${color}')" class="h-12 rounded-lg bg-gradient-to-r ${color} transition-all ${kid.color === color ? 'ring-4 ring-purple-600' : ''}"></button>
+                `).join('')}
+              </div>
+              <div class="flex gap-3">
+                <button onclick="${isEditing ? 'saveEditedKid()' : 'addKid()'}" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700">${isEditing ? 'Update' : 'Add'}</button>
+                <button onclick="state.editingKid=null; state.showAddKid=false; state.newKid={name:'',avatar:'👦',color:'from-blue-500 to-cyan-500'}; render();" class="flex-1 bg-gray-200 py-3 rounded-lg hover:bg-gray-300">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return modals;
+    }
+
+    function getCalendarHTML() {
+      const currentKid = getCurrentKid();
+      const year = state.currentMonth.getFullYear();
+      const month = state.currentMonth.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startingDayOfWeek = firstDay.getDay();
+      
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      const days = [];
+      for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
+      for (let i = 1; i <= daysInMonth; i++) days.push(i);
+      
+      function getTasksForDate(day) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return state.taskCompletions.filter(tc => tc.date === dateStr && tc.kidId === currentKid.id);
+      }
+      
+      function getRewardsForDate(day) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return state.rewardPurchases.filter(rp => rp.date === dateStr && rp.kidId === currentKid.id);
+      }
+      
+      function getEventsForDate(day) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return state.events.filter(e => e.kidId === currentKid.id && doesEventOccurOnDate(e, dateStr));
+      }
+      
+      // Get selected date info if any
+      let selectedDateInfo = '';
+      if (state.selectedCalendarDate) {
+        const selectedDay = new Date(state.selectedCalendarDate).getDate();
+        const selectedTasks = getTasksForDate(selectedDay);
+        const selectedRewards = getRewardsForDate(selectedDay);
+        const selectedEvents = getEventsForDate(selectedDay);
+        const dateObj = new Date(state.selectedCalendarDate + 'T00:00:00');
+        
+        selectedDateInfo = `
+          <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-gray-800">${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h3>
+              <button onclick="state.selectedCalendarDate=null; render();" class="text-gray-500 hover:text-gray-700">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            
+            ${selectedEvents.length > 0 ? `
+              <div class="mb-4">
+                <h4 class="font-semibold text-gray-700 mb-2">📅 Events</h4>
+                <div class="space-y-2">
+                  ${selectedEvents.map(event => `
+                    <div class="${event.color} text-white rounded-lg p-3 flex items-center gap-3">
+                      <span class="text-2xl">${event.icon}</span>
+                      <span class="font-semibold">${event.title}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${selectedTasks.length > 0 ? `
+              <div class="mb-4">
+                <h4 class="font-semibold text-gray-700 mb-2">✅ Completed Tasks (${selectedTasks.reduce((sum, t) => sum + t.points, 0)} points)</h4>
+                <div class="space-y-2">
+                  ${selectedTasks.map(task => `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3">
+                      <span class="text-2xl">${task.taskIcon}</span>
+                      <div class="flex-1">
+                        <div class="font-semibold text-gray-800">${task.taskTitle}</div>
+                        <div class="text-sm text-green-600">${task.points} points</div>
+                      </div>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${selectedRewards.length > 0 ? `
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-2">🎁 Rewards Redeemed</h4>
+                <div class="space-y-2">
+                  ${selectedRewards.map(reward => `
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-3">
+                      <span class="text-2xl">${reward.rewardIcon}</span>
+                      <div class="flex-1">
+                        <div class="font-semibold text-gray-800">${reward.rewardTitle}</div>
+                        <div class="text-sm text-orange-600">${reward.cost} points</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${selectedEvents.length === 0 && selectedTasks.length === 0 && selectedRewards.length === 0 ? `
+              <div class="text-center text-gray-500 py-8">
+                <svg class="mx-auto mb-3 text-gray-300" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <p>No activities on this day</p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
+      return `
+        ${selectedDateInfo}
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">${monthNames[month]} ${year}</h2>
+            <div class="flex gap-2">
+              <button onclick="changeMonth(-1)" class="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button onclick="changeMonth(1)" class="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-7 gap-2 mb-2">
+            ${dayNames.map(day => `<div class="text-center font-semibold text-gray-600 py-2 text-sm">${day}</div>`).join('')}
+          </div>
+          <div class="grid grid-cols-7 gap-2">
+            ${days.map((day, index) => {
+              if (!day) return `<div key="empty-${index}" class="aspect-square"></div>`;
+              
+              const tasksForDay = getTasksForDate(day);
+              const rewardsForDay = getRewardsForDate(day);
+              const eventsForDay = getEventsForDate(day);
+              const today = new Date();
+              const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isSelected = state.selectedCalendarDate === dateStr;
+              const hasActivity = tasksForDay.length > 0 || rewardsForDay.length > 0 || eventsForDay.length > 0;
+              
+              return `
+                <div onclick="selectCalendarDate('${dateStr}')" class="aspect-square border-2 rounded-lg p-2 transition-all ${isToday ? 'border-purple-500 bg-purple-50' : isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'} ${hasActivity ? 'cursor-pointer hover:border-purple-400 hover:shadow-md' : ''}">
+                  <div class="font-semibold text-sm text-gray-700 mb-1">${day}</div>
+                  ${eventsForDay.length > 0 ? `
+                    <div class="space-y-1 mb-1">
+                      ${eventsForDay.slice(0, 2).map(event => `
+                        <div class="${event.color} text-white text-xs px-1 py-0.5 rounded flex items-center gap-1">
+                          <span>${event.icon}</span>
+                          <span class="truncate">${event.title}</span>
+                        </div>
+                      `).join('')}
+                      ${eventsForDay.length > 2 ? `<div class="text-xs text-gray-500">+${eventsForDay.length - 2} more</div>` : ''}
+                    </div>
+                  ` : ''}
+                  ${tasksForDay.length > 0 ? `<div class="text-xs text-green-600 font-semibold">✓ ${tasksForDay.length}</div>` : ''}
+                  ${rewardsForDay.length > 0 ? `<div class="text-xs text-orange-600 font-semibold">🎁 ${rewardsForDay.length}</div>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function getScheduleHTML() {
+      const currentKid = getCurrentKid();
+      const dateObj = new Date(state.selectedDate + 'T00:00:00');
+      
+      // Get events for this day
+      const eventsForDay = state.events.filter(e => e.kidId === currentKid.id && doesEventOccurOnDate(e, state.selectedDate));
+      
+      // Get schedules for this kid
+      const schedules = state.schedules.filter(s => s.kidId === currentKid.id).sort((a, b) => a.time.localeCompare(b.time));
+      
+      // Combine schedules and events, sorted by time
+      const allItems = [
+        ...schedules.map(s => ({ ...s, type: 'schedule' })),
+        ...eventsForDay.map(e => ({ ...e, type: 'event', time: '00:00' }))
+      ].sort((a, b) => a.time.localeCompare(b.time));
+      
+      return `
+        <div class="bg-white rounded-xl shadow-lg p-4 mb-6">
+          <div class="flex items-center justify-between">
+            <button onclick="changeDate(-1)" class="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="text-center">
+              <div class="text-lg font-bold text-gray-800">${state.selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+              <div class="text-sm text-gray-600">${state.selectedDate}</div>
+            </div>
+            <button onclick="changeDate(1)" class="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Daily Schedule</h2>
+          <button onclick="state.showAddSchedule=true; render();" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Schedule Item
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          ${eventsForDay.length > 0 ? `
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold text-gray-700 mb-3">📅 Events Today</h3>
+              <div class="space-y-2">
+                ${eventsForDay.map(event => `
+                  <div class="${event.color} text-white rounded-xl p-4 flex items-center gap-4 shadow-md">
+                    <span class="text-3xl">${event.icon}</span>
+                    <div class="flex-1">
+                      <h4 class="font-bold text-lg">${event.title}</h4>
+                      <div class="text-sm opacity-90">${new Date(event.date + 'T00:00:00').toLocaleDateString()}</div>
+                      ${event.recurrence !== 'none' ? `<div class="text-xs opacity-75 mt-1">🔄 Repeats ${event.recurrence}</div>` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${schedules.length > 0 ? `
+            <div>
+              <h3 class="text-lg font-semibold text-gray-700 mb-3">⏰ Daily Schedule</h3>
+              <div class="space-y-2">
+                ${schedules.map(schedule => `
+                  <div class="bg-white rounded-xl p-4 shadow-md border-l-4 ${schedule.color.replace('bg-', 'border-')} flex items-center gap-4">
+                    <div class="text-xl font-bold text-gray-700 min-w-[70px]">${schedule.time}</div>
+                    <span class="text-2xl">${schedule.icon}</span>
+                    <div class="flex-1">
+                      <h4 class="font-semibold text-gray-800">${schedule.title}</h4>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${schedules.length === 0 && eventsForDay.length === 0 ? `
+            <div class="text-center py-12">
+              <svg class="mx-auto mb-4 text-gray-300" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <h3 class="text-xl font-semibold text-gray-600 mb-2">No schedule items</h3>
+              <p class="text-gray-500">Add schedule items to organize your day</p>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function handleAdminLogin() {
+      const input = document.getElementById('adminPasswordInput');
+      if (input.value === 'admin123') {
+        state.isAdminLocked = false;
+        state.mode = 'admin';
+        render();
+      } else {
+        alert('Password: admin123');
+      }
+    }
+
+    function adjustPoints(kidId, amount) {
+      state.kids = state.kids.map(k => k.id === kidId ? { ...k, points: Math.max(0, k.points + amount) } : k);
+      render();
+    }
+
+    function editKid(kidId) {
+      state.editingKid = { ...state.kids.find(k => k.id === kidId) };
+      render();
+    }
+
+    function deleteKid(kidId) {
+      if (state.kids.length <= 1) {
+        alert('You must have at least one child!');
+        return;
+      }
+      if (confirm('Delete this child? All their data will be removed.')) {
+        state.kids = state.kids.filter(k => k.id !== kidId);
+        state.taskCompletions = state.taskCompletions.filter(tc => tc.kidId !== kidId);
+        state.rewardPurchases = state.rewardPurchases.filter(rp => rp.kidId !== kidId);
+        state.events = state.events.filter(e => e.kidId !== kidId);
+        if (state.selectedKid >= state.kids.length - 1) state.selectedKid = 0;
+        render();
+      }
+    }
+
+    function addTask() {
+      const title = document.getElementById('taskTitle').value;
+      const points = parseInt(document.getElementById('taskPoints').value) || 10;
+      const icon = document.getElementById('taskIcon').value;
+      const category = document.getElementById('taskCategory').value;
+      
+      if (!title.trim()) return;
+      
+      state.tasks.push({ id: Date.now(), title, points, icon, category });
+      state.showAddTask = false;
+      state.newTask = { title: '', points: 10, icon: '⭐', category: 'Daily' };
+      render();
+    }
+
+    function addReward() {
+      const title = document.getElementById('rewardTitle').value;
+      const cost = parseInt(document.getElementById('rewardCost').value) || 100;
+      const icon = document.getElementById('rewardIcon').value;
+      
+      if (!title.trim()) return;
+      
+      state.rewards.push({ id: Date.now(), title, cost, icon });
+      state.showAddReward = false;
+      state.newReward = { title: '', cost: 100, icon: '🎁' };
+      render();
+    }
+
+    function addKid() {
+      const name = document.getElementById('kidName').value;
+      if (!name.trim()) return;
+      
+      state.kids.push({ id: Date.now(), name, avatar: state.newKid.avatar, color: state.newKid.color, points: 0 });
+      state.showAddKid = false;
+      state.newKid = { name: '', avatar: '👦', color: 'from-blue-500 to-cyan-500' };
+      render();
+    }
+
+    function saveEditedKid() {
+      const name = document.getElementById('kidName').value;
+      if (!name.trim()) return;
+      
+      state.kids = state.kids.map(k => k.id === state.editingKid.id ? { ...state.editingKid, name } : k);
+      state.editingKid = null;
+      render();
+    }
+
+    function updateKidField(field, value) {
+      if (state.editingKid) {
+        state.editingKid[field] = value;
+      } else {
+        state.newKid[field] = value;
+      }
+      render();
+    }
+
+    function toggleRewardFulfillment(purchaseId) {
+      state.rewardPurchases = state.rewardPurchases.map(rp => rp.id === purchaseId ? { ...rp, fulfilled: !rp.fulfilled } : rp);
+      render();
+    }
+
+    function changeDate(days) {
+      const newDate = new Date(state.selectedDate);
+      newDate.setDate(newDate.getDate() + days);
+      state.selectedDate = newDate.toISOString().split('T')[0];
+      render();
+    }
+
+    function changeMonth(direction) {
+      const newMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth() + direction, 1);
+      state.currentMonth = newMonth;
+      render();
+    }
+
+    function selectCalendarDate(dateStr) {
+      state.selectedCalendarDate = dateStr;
+      render();
+    }
+
+    function addEvent() {
+      const title = document.getElementById('eventTitle').value;
+      const date = document.getElementById('eventDate').value;
+      const icon = document.getElementById('eventIcon').value;
+      const recurrence = document.getElementById('eventRecurrence').value;
+      
+      if (!title.trim() || !date) return;
+      
+      const currentKid = getCurrentKid();
+      state.events.push({ id: Date.now(), title, date, icon, color: state.newEvent.color, recurrence, kidId: currentKid.id });
+      state.showAddEvent = false;
+      state.newEvent = { title: '', date: '', icon: '📅', color: 'bg-blue-500', recurrence: 'none' };
+      render();
+    }
+
+    function editEvent(eventId) {
+      state.editingEvent = { ...state.events.find(e => e.id === eventId) };
+      render();
+    }
+
+    function saveEditedEvent() {
+      const title = document.getElementById('eventTitle').value;
+      const date = document.getElementById('eventDate').value;
+      const icon = document.getElementById('eventIcon').value;
+      const recurrence = document.getElementById('eventRecurrence').value;
+      
+      if (!title.trim() || !date) return;
+      
+      state.events = state.events.map(e => e.id === state.editingEvent.id ? { ...state.editingEvent, title, date, icon, recurrence } : e);
+      state.editingEvent = null;
+      render();
+    }
+
+    function deleteEvent(eventId) {
+      if (confirm('Delete this event?')) {
+        state.events = state.events.filter(e => e.id !== eventId);
+        render();
+      }
+    }
+
+    function updateEventField(field, value) {
+      if (state.editingEvent) {
+        state.editingEvent[field] = value;
+      } else {
+        state.newEvent[field] = value;
+      }
+      render();
+    }
+
+    function addSchedule() {
+      const time = document.getElementById('scheduleTime').value;
+      const title = document.getElementById('scheduleTitle').value;
+      const icon = document.getElementById('scheduleIcon').value;
+      
+      if (!title.trim() || !time) return;
+      
+      const currentKid = getCurrentKid();
+      state.schedules.push({ id: Date.now(), time, title, icon, color: state.newSchedule.color, kidId: currentKid.id });
+      state.showAddSchedule = false;
+      state.newSchedule = { time: '09:00', title: '', icon: '⏰', color: 'bg-blue-500' };
+      render();
+    }
+
+    function editSchedule(scheduleId) {
+      state.editingSchedule = { ...state.schedules.find(s => s.id === scheduleId) };
+      render();
+    }
+
+    function saveEditedSchedule() {
+      const time = document.getElementById('scheduleTime').value;
+      const title = document.getElementById('scheduleTitle').value;
+      const icon = document.getElementById('scheduleIcon').value;
+      
+      if (!title.trim() || !time) return;
+      
+      state.schedules = state.schedules.map(s => s.id === state.editingSchedule.id ? { ...state.editingSchedule, time, title, icon } : s);
+      state.editingSchedule = null;
+      render();
+    }
+
+    function deleteSchedule(scheduleId) {
+      if (confirm('Delete this schedule item?')) {
+        state.schedules = state.schedules.filter(s => s.id !== scheduleId);
+        render();
+      }
+    }
+
+    function updateScheduleField(field, value) {
+      if (state.editingSchedule) {
+        state.editingSchedule[field] = value;
+      } else {
+        state.newSchedule[field] = value;
+      }
+      render();
+    }
+
+    function attachEventListeners() {
+      // Event listeners are attached via onclick in HTML
+    }
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
